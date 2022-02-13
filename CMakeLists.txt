@@ -1,7 +1,17 @@
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
 
-# Find Gazebo and Includes
-find_package(gazebo REQUIRED)
+project(gazebo-realsense LANGUAGES CXX)
+include(FindPkgConfig)
+
+# try to use ccache if found
+find_program(CCACHE_PROGRAM ccache)
+if(CCACHE_PROGRAM)
+  set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_PROGRAM})
+endif(CCACHE_PROGRAM)
+
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
 
 # Custom instalation paths
 if (GZRS_PLUGIN_INSTALL_PATH)
@@ -21,14 +31,38 @@ else()
     GET_FILENAME_COMPONENT(GZRS_MODEL_PATH ${GAZEBO_MEDIA_PATH}/../models ABSOLUTE)
 endif()
 
-# Compiler flags
-set(CUSTOM_COMPILE_FLAGS "-g -Wall")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${GAZEBO_CXX_FLAGS} ${CUSTOM_COMPILE_FLAGS}")
+if(NOT OGRE_PREFIX)
+  set(OGRE_PREFIX /usr/local/ogre)
+endif()
+
+if(NOT IGNITION_PREFIX)
+  set(IGNITION_PREFIX /usr/local/ignition)
+endif()
+
+if(NOT GAZEBO_PREFIX)
+  set(GAZEBO_PREFIX /usr/local/gazebo)
+endif()
+
+if(NOT FFMPEG_PREFIX)
+  set(FFMPEG_PREFIX /usr/local/ffmpeg)
+endif()
+
+list(APPEND CMAKE_PREFIX_PATH ${OGRE_PREFIX} ${IGNITION_PREFIX} ${GAZEBO_PREFIX} ${FFMPEG_PREFIX})
+
+pkg_check_modules(FFMPEG REQUIRED libavcodec)
+pkg_check_modules(OGRE REQUIRED OGRE OGRE-Terrain)
+pkg_check_modules(GAZEBO REQUIRED gazebo)
 
 # Include and Link directories
-include_directories( ${GAZEBO_INCLUDE_DIRS} )
-link_directories( ${GAZEBO_LIBRARY_DIRS} )
+include_directories(
+  ${GAZEBO_INCLUDE_DIRS}
+  ${FFMPEG_INCLUDE_DIRS}
+  ${OGRE_INCLUDE_DIRS})
+
+link_directories(
+  ${GAZEBO_LIBRARY_DIRS}
+  ${FFMPEG_LIBRARY_DIRS}
+  ${OGRE_LIBRARY_DIRS})
 
 add_subdirectory(gzrs)
 add_subdirectory(models)
-
